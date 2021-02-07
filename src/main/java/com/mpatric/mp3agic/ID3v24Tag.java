@@ -1,5 +1,9 @@
 package com.mpatric.mp3agic;
 
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
 public class ID3v24Tag extends AbstractID3v2Tag {
 
 	public static final String VERSION = "4.0";
@@ -47,8 +51,38 @@ public class ID3v24Tag extends AbstractID3v2Tag {
 	}
 
 	@Override
-	public void setGenreDescription(String text) {
-		ID3v2TextFrameData frameData = new ID3v2TextFrameData(useFrameUnsynchronisation(), new EncodedText(text));
+	public void setGenreDescription(String genre) {
+		this.setGenreDescription(new EncodedText(genre));
+	}
+
+	public void setGenreDescription(List<String> genres) {
+		Charset charset = Charset.forName(EncodedText.CHARSET_UTF_16);
+
+		int size = 0;
+		List<byte[]> parts = new ArrayList<byte[]>();
+		for (String genre : genres) {
+			byte[] part = genre.getBytes(charset);
+			parts.add(part);
+			size += part.length + 4;
+		}
+
+		byte[] content = new byte[size];
+		int position = 0;
+		for (byte[] part : parts) {
+			content[position++] = ~0;
+			content[position++] = ~1;
+			for (byte b : part) {
+				content[position++] = b;
+			}
+			content[position++] = 0;
+			content[position++] = 0;
+		}
+
+		this.setGenreDescription(new EncodedText(EncodedText.TEXT_ENCODING_UTF_16, content));
+	}
+
+	protected void setGenreDescription(EncodedText text) {
+		ID3v2TextFrameData frameData = new ID3v2TextFrameData(useFrameUnsynchronisation(), text);
 		ID3v2FrameSet frameSet = getFrameSets().get(ID_GENRE);
 		if (frameSet == null) {
 			getFrameSets().put(ID_GENRE, frameSet = new ID3v2FrameSet(ID_GENRE));
